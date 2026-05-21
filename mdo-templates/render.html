@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>MDO · Render</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Render endpoint — renders ONE template at the exact IG output
+     resolution, with placeholders baked into the DOM. Designed to
+     be loaded by Claude Code's headless browser:
+
+       render.html?t=sq-01            → placeholders ([TITULO] etc.)
+       render.html?t=sq-01&example=1  → realistic example data
+       render.html?t=sq-01&safe=1     → shows IG safe-zone overlay
+
+     Output sizes (matches IG / Postiz exactly):
+       Square  (sq-*) → 1080×1080
+       Portrait (po-*) → 1080×1350
+       Story   (st-*) → 1080×1920
+       Carousel A (ca-*) → 1080×1080
+       Carousel B (cb-*) → 1080×1350
+     ============================================================ */
+
+  :root {
+    --navy: #1a3a6e; --navy-deep:#13284f; --navy-ink: #0e1e3d;
+    --blue-mid: #3a6db8; --blue: #5f93de; --blue-lt: #7eb3f7;
+    --blue-pale:#e8f0fb; --blue-tint:#f4f7fd;
+    --paper: #f7f9fc; --paper-warm:#fafbfd;
+    --ink: #1a1a2e; --ink-70: #3d4f6b; --ink-55: #5a6e8a;
+    --ink-35: #7a8aa6; --ink-15: #b5c0d2;
+    --hair: rgba(26,58,110,0.14); --hair-2: rgba(26,58,110,0.28);
+    --amber-bg: #fffbec; --amber-bd: #f0e0a0; --amber-tx: #5a4a10;
+    --green: #2e7d6b; --purple: #7b3fa0;
+  }
+  html, body { margin: 0; padding: 0; background: #ffffff; overflow: hidden; }
+  body { font-family: 'Montserrat', system-ui, sans-serif; color: var(--ink); }
+
+  #stage {
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+  }
+  #stage > .__scaled {
+    transform-origin: top left;
+  }
+
+  /* IG safe-zone overlay (toggle with ?safe=1) — shows where text
+     might be clipped by IG's UI overlays (top status, bottom shortcuts) */
+  .safezone {
+    position: absolute; inset: 0; pointer-events: none; z-index: 1000;
+  }
+  .safezone::before, .safezone::after {
+    content: ""; position: absolute; left: 0; right: 0;
+    background: repeating-linear-gradient(45deg,
+      rgba(255,80,80,0.15) 0 14px, rgba(255,80,80,0.05) 14px 28px);
+    border: 1px dashed rgba(255,80,80,0.5);
+  }
+  /* Top status bar zone */
+  .safezone::before { top: 0; height: 250px; }
+  /* Bottom shortcut zone (for stories: profile pill, reply, more, send) */
+  .safezone.story::after { bottom: 0; height: 330px; }
+  .safezone.feed::after { bottom: 0; height: 200px; }
+  .safezone-label {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-family: 'Geist Mono', monospace; font-size: 22px; letter-spacing: 0.1em;
+    color: rgba(255,80,80,0.85); text-transform: uppercase;
+    background: rgba(255,255,255,0.85); padding: 4px 10px;
+  }
+  .safezone-label.top { top: 12px; }
+  .safezone-label.bot { bottom: 12px; }
+
+  /* === All the same template primitives as the main file === */
+  .tpl { width: 100%; height: 100%; box-sizing: border-box; position: relative;
+    overflow: hidden; background: var(--paper); color: var(--ink);
+    font-family: 'Montserrat', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tpl.navy { background: var(--navy); color: var(--paper); }
+  .tpl.navy-deep { background: var(--navy-deep); color: var(--paper); }
+  .tpl.white { background: #ffffff; }
+  .tpl.tint { background: var(--blue-tint); }
+  .tpl.pale { background: var(--blue-pale); }
+
+  .eyebrow { font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.22em; text-transform: uppercase; font-weight: 500; color: var(--blue-mid); }
+  .tpl.navy .eyebrow, .tpl.navy-deep .eyebrow { color: var(--blue-lt); }
+
+  .display { font-family: 'Montserrat', sans-serif; font-weight: 700;
+    line-height: 1.05; letter-spacing: -0.02em; color: var(--ink); }
+  .tpl.navy .display, .tpl.navy-deep .display { color: var(--paper); }
+
+  .display-serif { font-family: 'Instrument Serif', serif; font-weight: 400;
+    line-height: 1.0; letter-spacing: -0.012em; }
+  .display-serif em { font-style: italic; }
+
+  .lede { font-family: 'Montserrat', sans-serif; font-weight: 400;
+    line-height: 1.45; color: var(--ink-70); }
+  .tpl.navy .lede, .tpl.navy-deep .lede { color: rgba(247,249,252,0.82); }
+
+  .mono { font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.04em; color: var(--ink-55); }
+
+  .number-xl { font-family: 'Montserrat', sans-serif; font-weight: 300;
+    letter-spacing: -0.04em; line-height: 0.85; font-variant-numeric: tabular-nums; }
+
+  .hair { height: 1px; background: var(--hair); width: 100%; }
+  .hair-navy { height: 1px; background: var(--navy); width: 100%; }
+  .tpl.navy .hair, .tpl.navy-deep .hair { background: rgba(247,249,252,0.20); }
+
+  .slot { position: relative;
+    background: repeating-linear-gradient(135deg,
+      rgba(26,58,110,0.05) 0 8px, rgba(26,58,110,0.10) 8px 16px), var(--blue-tint);
+    color: var(--ink-55); overflow: hidden; border: 1px solid var(--hair); }
+  .slot-cap { position: absolute; left: 12px; bottom: 10px;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .lockup { display: inline-flex; align-items: center; gap: 10px; }
+  .lockup img.iso { display: block; height: 28px; width: auto; }
+  .lockup .wm { font-family: 'Montserrat', sans-serif; font-weight: 600;
+    font-size: 11px; letter-spacing: 0.08em; line-height: 1.15; color: var(--navy);
+    text-transform: uppercase; }
+  .lockup .wm small { display: block; font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.14em; color: var(--ink-55); margin-top: 1px; }
+
+  .footer-row { display: flex; justify-content: space-between; align-items: end;
+    font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.08em;
+    color: var(--ink-55); }
+  .tpl.navy .footer-row { color: rgba(247,249,252,0.55); }
+
+  .chip { display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border: 1px solid var(--hair-2); border-radius: 999px;
+    font-family: 'Geist Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--navy); background: rgba(255,255,255,0.5); }
+  .chip.solid { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+  .tpl.navy .chip { color: var(--paper); border-color: rgba(247,249,252,0.30); background: transparent; }
+  .tpl.navy .chip.solid { background: var(--paper); color: var(--navy); border-color: var(--paper); }
+
+  .step-num { font-family: 'Instrument Serif', serif; font-style: italic;
+    font-size: 36px; color: var(--blue-mid); line-height: 0.8; }
+
+  .asterisk { font-family: 'Instrument Serif', serif; font-style: italic;
+    color: var(--blue-mid); line-height: 0.7; }
+
+  .pgindex { font-family: 'Geist Mono', monospace; font-size: 10px;
+    letter-spacing: 0.16em; color: var(--ink-55);
+    display: inline-flex; align-items: center; gap: 6px; text-transform: uppercase; }
+  .pgindex .num { color: var(--navy); font-weight: 500; }
+  .pgindex .bar { width: 10px; height: 1px; background: currentColor; opacity: 0.4; }
+
+  .bg-grid-navy {
+    background-image: linear-gradient(to right, rgba(247,249,252,0.06) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  .quote-mark { font-family: 'Instrument Serif', serif; font-style: italic;
+    font-weight: 400; line-height: 0.7; color: var(--blue-mid); }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<script src="vendor/react.development.js"></script>
+<script src="vendor/react-dom.development.js"></script>
+<script src="vendor/babel.min.js"></script>
+
+<script type="text/babel" src="brand.jsx"></script>
+<script type="text/babel" src="templates-square.jsx"></script>
+<script type="text/babel" src="templates-portrait.jsx"></script>
+<script type="text/babel" src="templates-story.jsx"></script>
+<script type="text/babel" src="templates-carousel.jsx"></script>
+<script type="text/babel" src="templates-news.jsx"></script>
+<script type="text/babel" src="templates-variants.jsx"></script>
+<script type="text/babel" src="templates-variants-light.jsx"></script>
+
+<script type="text/babel">
+  // Render registry: template-id → { component, baseW, baseH, outW, outH, mode }
+  // - base = component's natural design size (matches the canvas preview)
+  // - out  = real IG output dimensions
+  // - mode = 'feed' | 'story' | 'square-carousel' → safe-zone overlay style
+  const TEMPLATES = {
+    'sq-01': { c: SqVencimiento, baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-02': { c: SqCita,        baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-03': { c: SqNumero,      baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'po-04': { c: PoServicio,    baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'po-05': { c: PoAltaCliente, baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'po-06': { c: PoEquipo,      baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'st-07': { c: StVencimientos,baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+    'st-08': { c: StCita,        baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+    'st-09': { c: StCTA,         baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+    'ca-cover': { c: CalCover,   baseW: 420, baseH: 420, outW: 1080, outH: 1080, mode: 'feed' },
+    'ca-q1':    { c: CalQ1,      baseW: 420, baseH: 420, outW: 1080, outH: 1080, mode: 'feed' },
+    'ca-q2':    { c: CalQ2,      baseW: 420, baseH: 420, outW: 1080, outH: 1080, mode: 'feed' },
+    'cb-cover': { c: TipCover,   baseW: 420, baseH: 525, outW: 1080, outH: 1350, mode: 'feed' },
+    'cb-tip1':  { c: TipSlide2,  baseW: 420, baseH: 525, outW: 1080, outH: 1350, mode: 'feed' },
+    'cb-tip2':  { c: TipSlide3,  baseW: 420, baseH: 525, outW: 1080, outH: 1350, mode: 'feed' },
+    'cb-tip3':  { c: TipSlide4,  baseW: 420, baseH: 525, outW: 1080, outH: 1350, mode: 'feed' },
+    'sq-12':    { c: SqNoticia,  baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'po-13':    { c: PoNoticia,  baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    // Variants
+    'sq-02b':   { c: SqCitaNavy,        baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-03b':   { c: SqNumeroSerif,     baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-12b':   { c: SqNoticiaBreaking, baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'po-04b':   { c: PoServicioNavy,    baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'po-05b':   { c: PoAnuncioLight,    baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'po-13b':   { c: PoNoticiaNavy,     baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'st-08b':   { c: StCitaNavy,        baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+    'st-09b':   { c: StCTANavy,         baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+    // Light / minimal variants
+    'sq-01b':   { c: SqVencimientoLight, baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-02c':   { c: SqCitaMinimal,      baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-03c':   { c: SqNumeroLight,      baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'sq-12c':   { c: SqNoticiaMinimal,   baseW: 540, baseH: 540, outW: 1080, outH: 1080, mode: 'feed' },
+    'po-06b':   { c: PoEquipoNoPhoto,    baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'po-13c':   { c: PoNoticiaMinimal,   baseW: 540, baseH: 675, outW: 1080, outH: 1350, mode: 'feed' },
+    'st-07b':   { c: StVencimientosLight,baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+    'st-08c':   { c: StCitaMinimal,      baseW: 480, baseH: 853, outW: 1080, outH: 1920, mode: 'story' },
+  };
+
+  const EXAMPLES = {
+    ...EXAMPLES_SQUARE, ...EXAMPLES_PORTRAIT, ...EXAMPLES_STORY, ...EXAMPLES_CAROUSEL, ...EXAMPLES_NEWS, ...EXAMPLES_VARIANTS, ...EXAMPLES_VARIANTS_LIGHT,
+  };
+
+  // Resolve params from both ?query and #hash — the latter survives
+  // any preview-infrastructure rewrites that mangle query strings.
+  const qs = new URLSearchParams(location.search);
+  const hs = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  const get = (k) => hs.get(k) || qs.get(k);
+
+  // If `t` is set but not in TEMPLATES, treat as unset (fall back to default).
+  // This is what makes the page robust to preview hosts adding their own `t`.
+  const rawTpl = get('t');
+  const tplId = (rawTpl && TEMPLATES[rawTpl]) ? rawTpl : 'sq-01';
+  const showExample = (get('example') === '1') || (get('mode') === 'example');
+  const showSafe = get('safe') === '1';
+
+  const def = TEMPLATES[tplId];
+  if (!def) {
+    document.getElementById('stage').innerHTML =
+      '<div style="padding:40px;font-family:Geist Mono,monospace">' +
+      'Template "' + tplId + '" no encontrado. IDs disponibles:<br><br>' +
+      Object.keys(TEMPLATES).map(k => '<code>?t=' + k + '</code>').join('<br>') +
+      '</div>';
+  } else {
+    const scaleX = def.outW / def.baseW;
+    const scaleY = def.outH / def.baseH;
+    // Use uniform scale based on width — if height ratio differs slightly,
+    // the template fills width and clips height (vice-versa). For our IDs
+    // the ratios match exactly so this is purely defensive.
+    const scale = scaleX;
+
+    // Size body+stage to exact IG output
+    document.body.style.cssText += `width:${def.outW}px;height:${def.outH}px;`;
+    const stage = document.getElementById('stage');
+    stage.style.width = def.outW + 'px';
+    stage.style.height = def.outH + 'px';
+
+    // Look up component name to find its EXAMPLES key.
+    const compName = def.c.name;
+    const props = showExample ? (EXAMPLES[compName] || {}) : {};
+
+    // Render template at base size, scaled to fill stage.
+    const wrap = document.createElement('div');
+    wrap.className = '__scaled';
+    wrap.style.cssText = `width:${def.baseW}px;height:${def.baseH}px;transform:scale(${scale});`;
+    stage.appendChild(wrap);
+
+    ReactDOM.createRoot(wrap).render(React.createElement(def.c, props));
+
+    if (showSafe) {
+      const sz = document.createElement('div');
+      sz.className = 'safezone ' + (def.mode === 'story' ? 'story' : 'feed');
+      sz.innerHTML =
+        '<div class="safezone-label top">UI superior — evitar texto</div>' +
+        '<div class="safezone-label bot">UI inferior — evitar texto</div>';
+      stage.appendChild(sz);
+    }
+
+    // Tell host (Claude Code's headless browser) we're ready to screenshot
+    document.title = 'MDO · ' + tplId + (showExample ? ' (ejemplo)' : ' (placeholders)');
+    // Custom event for puppeteer/playwright waitForFunction()
+    window.__mdoReady = true;
+    document.dispatchEvent(new Event('mdo:ready'));
+  }
+</script>
+
+</body>
+</html>

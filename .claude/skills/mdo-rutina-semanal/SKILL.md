@@ -66,26 +66,27 @@ Para cada noticia extraer:
 1. ❌ **NO** mencionar números específicos: montos de monotributo, alícuotas, topes de facturación, importes mínimos no imponibles, etc. (cambian con la normativa)
 2. ❌ **NO** mencionar fechas de vencimiento ni plazos específicos
 3. ❌ **NO** dar consejos legales o de derecho tributario específicos
-4. ✅ **SÍ**: tips genéricos atemporales sobre gestión PyME, hábitos contables, organización financiera
+4. ❌ **NO** usar tono de "tutorial" o "paso a paso" — evitar frases tipo "hacé X", "reservá X", "abrí una cuenta"
+5. ✅ **SÍ**: contenido de **concientización y planeamiento** — "¿sabías que...?", beneficios que existen, herramientas disponibles, conceptos que los dueños de PyME deberían conocer
 
-Ejemplos de tips OK:
+El tono es **informativo y profesional**, no prescriptivo. MDO habla como experto que abre el panorama, no como instructor que da tareas.
 
-- "Separá cuenta personal de cuenta empresa: la mezcla es la #1 razón de líos contables"
-- "Pedí siempre factura A cuando podés deducir: te ahorra IVA"
-- "Reservá un % de cada cobro para impuestos antes de tocar la plata"
-- "Llevá control semanal de caja, no mensual: detectás desvíos antes"
-- "Conciliá bancos cada 15 días, no a fin de mes"
-- "Tu contador no es un mal necesario, es un asesor — usalo para decisiones, no solo para cumplir"
-- "Documentá los gastos del día mismo en una app o planilla: la memoria al cierre miente"
+Ejemplos de tips OK (estilo preferido):
 
-Si el tip generado contiene cualquier número específico o referencia normativa con fecha, **descartarlo y generar otro**.
+- "¿Sabías que las PyMEs tienen acceso a regímenes tributarios que reducen la carga impositiva?"
+- "¿Sabías que podés diferir el pago de IVA en ciertas operaciones si se cumplen determinadas condiciones?"
+- "¿Sabías que la certificación PyME habilita beneficios en Ganancias, cargas sociales y financiamiento?"
+- "Existen herramientas de planeamiento impositivo que muchas PyMEs no conocen ni aprovechan"
+- "El crédito fiscal de IVA en inversiones productivas es un beneficio que pocas empresas utilizan"
+
+Si el tip generado contiene cualquier número específico, fecha, o suena a manual de procedimientos, **descartarlo y generar otro**.
 
 Mapear a slots de `po-04`:
-- `COPETE` — categoría del tip, ej: "Gestión PyME · Tip semanal"
-- `TITULO` — headline corto del tip (máx 50 chars), ej: "Separá lo personal de lo de la empresa"
-- `BAJADA` — explicación breve (máx 150 chars)
-- `BULLET_1`..`BULLET_4` — 4 puntos prácticos
-- `CTA` — frase de cierre, ej: "Consultanos para auditar tu setup contable"
+- `COPETE` — dejar **vacío** (`""`) — no mostrar etiqueta arriba a la derecha
+- `TITULO` — pregunta o afirmación corta (máx 50 chars), ej: "¿Sabías que podés diferir impuestos?"
+- `BAJADA` — una línea que amplía el concepto (máx 150 chars)
+- `BULLET_1`..`BULLET_4` — 4 beneficios o conceptos clave, no pasos
+- `CTA` — frase que invita a consultar, ej: "Consultanos para revisar tu estructura impositiva"
 - `HANDLE` — `@mdoconsultores`
 
 ### 4. Renderizar las 3 imágenes
@@ -115,10 +116,11 @@ git commit -m "posts: rutina semanal $(date +%Y-%m-%d)"
 git push origin <branch>
 ```
 
-URL pública de cada imagen:
+URL pública de cada imagen (usar la rama activa, no hardcodear `main`):
 ```
-https://raw.githubusercontent.com/jmartinez-sketch/mdo-automatizaciones-redes/main/posts/YYYY-MM-DD-N.png
+https://raw.githubusercontent.com/jmartinez-sketch/mdo-automatizaciones-redes/<branch>/posts/YYYY-MM-DD-N.png
 ```
+donde `<branch>` = resultado de `git branch --show-current`
 
 ### 6. Crear los 3 drafts en Metricool
 

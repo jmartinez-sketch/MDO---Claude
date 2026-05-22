@@ -1,0 +1,22 @@
+{
+  "name": "mdo---claude",
+  "version": "1.0.0",
+  "description": "Repositorio del proyecto MDO trabajado con Claude Code.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:35143/git/jmartinez-sketch/MDO---Claude"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/standalone": "^7.29.0",
+    "puppeteer": "^25.0.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

@@ -54,17 +54,18 @@ out/                    PNGs de prueba locales (en .gitignore)
 ## MCPs disponibles (verificar al inicio de cada sesión)
 
 - **Gmail** — para leer el label `MDO/AUTOMATIZACIONES/Claude/Newsletter`
-- **Postiz** — para crear drafts. Integration ID IG: `cmpfmv6v90031pa0ysdlel0wi`, plataforma `instagram-standalone`, setting `post_type=post`
-- **GitHub** — para commitear PNGs y obtener URLs públicas
+- **Metricool** — para crear drafts en el planificador. Brand `Martinez, De Orta & Asociados`, `blogId: 6267636`, IG `@mdoconsultores`, timezone `America/Argentina/Buenos_Aires`. Tools clave: `createScheduledPost`, `getScheduledPosts`, `updateScheduledPost`.
+- **GitHub** — para commitear PNGs (historial / auditoría). Metricool ya descarga la imagen a su propio CDN al crear el post, así que la URL pública del repo solo se usa como fuente, no como hosting permanente.
 - **Canva** — disponible pero no se usa en esta rutina (descartado, ver brief)
 
 ## Decisiones cerradas (NO revisitar)
 
-- ❌ Metricool descartado (requiere plan Advanced)
+- ❌ Postiz descartado (los posts quedaban trabados en DRAFT y nunca pasaban a SCHEDULED — bug conocido issue #818 gitroomhq/postiz-app, y el MCP no permite leer/actualizar/borrar posts existentes)
 - ❌ Canva-IA descartado para diseño (no respeta hex codes ni edita colores en free)
-- ❌ Vercel descartado (el render corre dentro de la sesión cloud, PNGs se hostean en raw.githubusercontent)
+- ❌ Vercel descartado (el render corre dentro de la sesión cloud)
 - ✅ Render local en sesión cloud con Puppeteer + render.html (anduvo, ver `scripts/render.js`)
 - ✅ Templates HTML+JSX de Claude Design (Anthropic Labs) como base de diseño
+- ✅ Metricool como planificador (validado 22/05/2026 — `createScheduledPost` deja el post como SCHEDULED de verdad, no se traba)
 
 ## Regla dura sobre el tip PyME (viernes)
 

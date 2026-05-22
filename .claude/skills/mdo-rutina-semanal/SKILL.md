@@ -1,6 +1,6 @@
 ---
 name: mdo-rutina-semanal
-description: Rutina semanal de posteos MDO Consultores. Lee el Gmail del usuario (label MDO/AUTOMATIZACIONES/Claude/Newsletter, últimos 7 días), elige las 2 noticias más impactantes, arma un tip PyME genérico, renderiza 3 imágenes branded con los templates Claude Design, y crea 3 drafts en Postiz programados Lun/Mié/Vie 9hs Argentina. Usar cuando el usuario diga "corré la rutina semanal", "armá los posts de la semana", "ejecutá rutina MDO", o cuando se dispare por trigger los lunes 9am Argentina.
+description: Rutina semanal de posteos MDO Consultores. Lee el Gmail del usuario (label MDO/AUTOMATIZACIONES/Claude/Newsletter, últimos 7 días), elige las 2 noticias más impactantes, arma un tip PyME genérico, renderiza 3 imágenes branded con los templates Claude Design, y crea 3 drafts en Metricool programados Lun/Mié/Vie 9hs Argentina para la cuenta IG @mdoconsultores. Usar cuando el usuario diga "corré la rutina semanal", "armá los posts de la semana", "ejecutá rutina MDO", o cuando se dispare por trigger los lunes 9am Argentina.
 ---
 
 # Rutina semanal de posteos MDO Consultores
@@ -16,7 +16,7 @@ Ejecutar **todos los lunes 9hs Argentina (UTC-3)** para armar los 3 posteos de l
 
 ## Output esperado
 
-3 drafts en Postiz, todos para la cuenta IG "Martinez, De Orta & Asociados" (`integrationId: cmpfmv6v90031pa0ysdlel0wi`, plataforma `instagram-standalone`, setting `post_type=post`):
+3 drafts en Metricool, todos para la cuenta IG "Martinez, De Orta & Asociados" (`blogId: 6267636`, network `instagram`, timezone `America/Argentina/Buenos_Aires`):
 
 | # | Día/Hora (ARG) | Tipo | Template | Fuente del contenido |
 |---|---|---|---|---|
@@ -120,49 +120,77 @@ URL pública de cada imagen:
 https://raw.githubusercontent.com/jmartinez-sketch/mdo---claude/<branch>/posts/YYYY-MM-DD-N.png
 ```
 
-### 6. Crear los 3 drafts en Postiz
+### 6. Crear los 3 drafts en Metricool
 
-Usar la MCP de Postiz: `mcp__7baee633-7005-45cc-8abd-4a6fd304c8ef__integrationSchedulePostTool`
+Usar la MCP de Metricool: `mcp__7d9da2c2-8ef9-4d07-bd69-a1376309827a__createScheduledPost`
 
 Para cada post:
 
 ```jsonc
 {
-  "integrationId": "cmpfmv6v90031pa0ysdlel0wi",
-  "isPremium": false,
-  "date": "<ISO UTC del día de publicación a las 12:00:00Z, que es 9hs ARG>",
-  "shortLink": false,
-  "type": "draft",
-  "postsAndComments": [{
-    "content": "<HTML con <p>, <strong>, etc.>",
-    "attachments": ["https://raw.githubusercontent.com/.../posts/YYYY-MM-DD-N.png"]
-  }],
-  "settings": [{"key": "post_type", "value": "post"}]
+  "blogId": "6267636",
+  "date": "<ISO con offset ART, ej: 2026-05-25T09:00:00-03:00>",
+  "info": {
+    "text": "<texto plano del posteo, ver sección 7>",
+    "draft": true,
+    "autoPublish": false,
+    "providers": [{"network": "instagram"}],
+    "publicationDate": {
+      "dateTime": "<YYYY-MM-DDTHH:mm:ss, ej: 2026-05-25T09:00:00>",
+      "timezone": "America/Argentina/Buenos_Aires"
+    },
+    "media": ["https://raw.githubusercontent.com/jmartinez-sketch/MDO---Claude/<branch>/posts/YYYY-MM-DD-N.png"],
+    "mediaAltText": [""],
+    "shortener": false,
+    "smartLinkData": {"ids": []},
+    "firstCommentText": "",
+    "hasNotReadNotes": false,
+    "descendants": [],
+    "instagramData": {"type": "POST", "showReelOnFeed": true, "collaborators": []}
+  }
 }
 ```
 
-### 7. Texto del posteo (content)
+Notas:
+- `draft: true` deja el post como borrador → el usuario lo aprueba a mano desde Metricool antes de que salga
+- `autoPublish: false` es red de seguridad extra (no publica solo aunque la fecha llegue)
+- Metricool descarga la imagen del repo y la copia a su CDN al crear el post, así que aunque el repo se vuelva privado después, la imagen ya queda hospedada por Metricool
+- Guardar el `id` y `uuid` de cada post creado por si hay que actualizarlo después con `updateScheduledPost`
+
+### 7. Texto del posteo (campo `text` de Metricool)
+
+Instagram NO soporta HTML — usar texto plano con saltos de línea (`\n` reales en el JSON, o `\n\n` para párrafo).
 
 Estructura recomendada para noticias:
 
-```html
-<p><strong>Hook directo</strong> (1 línea con la noticia clave)</p>
-<p>Detalle: qué cambió, a quién afecta, desde cuándo (2-3 líneas).</p>
-<p><strong>Impacto:</strong> qué significa esto en la práctica para vos / tu PyME.</p>
-<p>—</p>
-<p>📞 Consultanos: mdo-consultores.com.ar</p>
-<p>#MDOConsultores #Impuestos #Contabilidad #PyMEs #Argentina #AFIP #ARCA</p>
+```
+Hook directo (1 línea con la noticia clave)
+
+Detalle: qué cambió, a quién afecta, desde cuándo (2-3 líneas).
+
+Impacto: qué significa esto en la práctica para vos / tu PyME.
+
+—
+
+📞 Consultanos: mdo-consultores.com.ar
+
+#MDOConsultores #Impuestos #Contabilidad #PyMEs #Argentina #AFIP #ARCA
 ```
 
 Estructura para tip PyME:
 
-```html
-<p><strong>Tip PyME · [categoría]</strong></p>
-<p>[Tip principal en 1-2 líneas]</p>
-<p>Por qué importa: [breve explicación].</p>
-<p>—</p>
-<p>📞 Auditá tu setup contable con nosotros: mdo-consultores.com.ar</p>
-<p>#MDOConsultores #TipPyME #GestiónPyME #Contabilidad #Argentina</p>
+```
+Tip PyME · [categoría]
+
+[Tip principal en 1-2 líneas]
+
+Por qué importa: [breve explicación].
+
+—
+
+📞 Auditá tu setup contable con nosotros: mdo-consultores.com.ar
+
+#MDOConsultores #TipPyME #GestiónPyME #Contabilidad #Argentina
 ```
 
 Reglas de texto:
@@ -180,8 +208,9 @@ Cuando los 3 drafts estén creados:
 1. Reportar al usuario en chat (si la sesión es interactiva) o por log:
    - Las 3 noticias/temas elegidos
    - URLs de las 3 imágenes en GitHub
-   - IDs de los 3 drafts en Postiz
-2. Si algo falló (Gmail vacío, render falló, Postiz rechazó), reportar específicamente qué y NO crear drafts a medias.
+   - `id` y `uuid` de los 3 drafts en Metricool
+   - Recordatorio: "Revisá los drafts en https://app.metricool.com/planner y aprobalos antes del lunes/miércoles/viernes 9hs"
+2. Si algo falló (Gmail vacío, render falló, Metricool rechazó), reportar específicamente qué y NO crear drafts a medias.
 
 ## Notas técnicas
 
@@ -189,4 +218,5 @@ Cuando los 3 drafts estén creados:
 - **Branch**: el repo trabaja sobre `claude/wonderful-bardeen-IOPGx` (o la rama designada en el momento).
 - **Timezone**: Argentina = UTC-3. Sin DST. Lunes 9hs ARG = Lunes 12:00 UTC.
 - **Templates disponibles**: ver `mdo-templates/PLACEHOLDERS.md` para el catálogo completo.
-- **Postiz API key**: viene del MCP, no hardcodear en el código.
+- **Metricool**: la autenticación viene del MCP, no hardcodear nada. brand `blogId: 6267636`.
+- **Repo público**: las URLs `raw.githubusercontent.com/...` deben responder 200 al momento de crear el post (Metricool descarga la imagen una vez y la copia a su CDN). Si el repo es privado, el paso 6 falla.

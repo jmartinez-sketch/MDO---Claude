@@ -1,6 +1,6 @@
 ---
 name: mdo-rutina-semanal
-description: Rutina semanal de posteos MDO Consultores. Lee el Gmail del usuario (label MDO/AUTOMATIZACIONES/Claude/Newsletter, últimos 7 días), elige las 2 noticias más impactantes, arma un tip PyME genérico, renderiza 3 imágenes branded con los templates Claude Design, y crea 3 drafts en Metricool programados Lun/Mié/Vie 9hs Argentina para la cuenta IG @mdoconsultores. Usar cuando el usuario diga "corré la rutina semanal", "armá los posts de la semana", "ejecutá rutina MDO", o cuando se dispare por trigger los lunes 9am Argentina.
+description: Rutina semanal de posteos MDO Consultores. Lee el Gmail del usuario (label MDO/AUTOMATIZACIONES/Claude/Newsletter, últimos 7 días), elige las 2 noticias más impactantes, arma un tip PyME genérico, renderiza 3 imágenes branded con los templates Claude Design, y crea 3 drafts en Metricool programados Lun 15hs / Mié 9hs / Vie 9hs Argentina para la cuenta IG @mdoconsultores. Usar cuando el usuario diga "corré la rutina semanal", "armá los posts de la semana", "ejecutá rutina MDO", o cuando se dispare por trigger los lunes 9am Argentina.
 ---
 
 # Rutina semanal de posteos MDO Consultores
@@ -20,7 +20,7 @@ Ejecutar **todos los lunes 9hs Argentina (UTC-3)** para armar los 3 posteos de l
 
 | # | Día/Hora (ARG) | Tipo | Template | Fuente del contenido |
 |---|---|---|---|---|
-| 1 | Lunes 9hs    | Noticia destacada #1 | `sq-12` (Square 1080×1080) | Gmail newsletter |
+| 1 | Lunes 15hs    | Noticia destacada #1 | `sq-12` (Square 1080×1080) | Gmail newsletter |
 | 2 | Miércoles 9hs | Noticia destacada #2 | `sq-12` (Square 1080×1080) | Gmail newsletter |
 | 3 | Viernes 9hs   | Tip PyME genérico    | `po-04` (Portrait 1080×1350) | Generado por LLM |
 
@@ -129,14 +129,14 @@ Para cada post:
 ```jsonc
 {
   "blogId": "6267636",
-  "date": "<ISO con offset ART, ej: 2026-05-25T09:00:00-03:00>",
+  "date": "<ISO con offset ART — Lunes: 2026-05-25T15:00:00-03:00 / Miércoles: 2026-05-27T09:00:00-03:00 / Viernes: 2026-05-29T09:00:00-03:00>",
   "info": {
     "text": "<texto plano del posteo, ver sección 7>",
     "draft": true,
     "autoPublish": false,
     "providers": [{"network": "instagram"}],
     "publicationDate": {
-      "dateTime": "<YYYY-MM-DDTHH:mm:ss, ej: 2026-05-25T09:00:00>",
+      "dateTime": "<YYYY-MM-DDTHH:mm:ss — Lunes: 15:00:00 / Miércoles: 09:00:00 / Viernes: 09:00:00>",
       "timezone": "America/Argentina/Buenos_Aires"
     },
     "media": ["https://raw.githubusercontent.com/jmartinez-sketch/mdo-automatizaciones-redes/main/posts/YYYY-MM-DD-N.png"],
